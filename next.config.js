@@ -1,4 +1,11 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {}
+module.exports = {
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    config.module.rules.push({
+      test: /\.svg$/i,
+      type: "asset/resource",
+    });
 
-module.exports = nextConfig
+    return config;
+  },
+};
