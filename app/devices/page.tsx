@@ -1,23 +1,8 @@
 "use client";
 import CustomFooter from "@/components/footer";
 import CustomHeader from "@/components/header";
-import {
-  Table,
-  Search,
-  TableColumns,
-  TableData,
-  Avatar,
-  TableBehavior,
-  SortTypes,
-  TableSortBy,
-  TableRowConfig,
-  Button,
-  TableColumnWidth,
-  Tag,
-  Toggle,
-  Icon5GNetwork,
-} from "@veneer/core";
-import { useState, useEffect, SetStateAction, ChangeEvent, MouseEvent } from "react";
+import { Table, Search, TableColumns, TableData, SortTypes, TableSortBy, TableRowConfig, Button, Tag, Toggle } from "@veneer/core";
+import { useState, ChangeEvent, MouseEvent } from "react";
 import Link from "next/link";
 
 export default function Login() {
@@ -25,15 +10,16 @@ export default function Login() {
   const [orderBy, setOrderBy] = useState("serialNum");
   const [orderType, setOrderType] = useState<SortTypes>("ascending");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+
   const [serialNumSearch, setSerialNumSearch] = useState("");
   const [emailSearch, setEmailSearch] = useState("");
   const [setupStatusToggle, setSetupStatusToggle] = useState(false);
   const [connectionStatusToggle, setConnectionStatusToggle] = useState(false);
 
-  const [pagination, setPagination] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(2);
-
+  // DATA
+  // #region
   const dbData = [
     {
       serialNum: "1234",
@@ -83,13 +69,10 @@ export default function Login() {
   });
 
   const [tableData, setTableData] = useState(data);
+  // #endregion
 
-  useEffect(() => {
-    if (!pagination) {
-      setCurrentPage(1);
-    }
-  }, [pagination]);
-
+  // FILTERED DATA
+  // #region
   const filterSort = (
     data: TableData[],
     filters: { serialNum: string; email: string; setupStatus: boolean; connectionStatus: boolean },
@@ -99,20 +82,11 @@ export default function Login() {
     return data
       .filter((item) => !filters.serialNum || (item?.serialNum as string)?.toLowerCase().includes(filters.serialNum.toLowerCase()))
       .filter((item) => !filters.email || (item?.email as string)?.toLowerCase().includes(filters.email.toLowerCase()))
-      .filter((item) => {
-        const setupStatus = dbData.find((curData) => curData.serialNum === item.serialNum)?.setupStatus;
-        return !filters.setupStatus || setupStatus;
-      })
-      .filter((item) => {
-        const connectionStatus = dbData.find((curData) => curData.serialNum === item.serialNum)?.connectionStatus;
-        return !filters.connectionStatus || connectionStatus;
-      })
+      .filter((item) => !filters.setupStatus || dbData.find((curData) => curData.serialNum === item.serialNum)?.setupStatus)
+      .filter((item) => !filters.connectionStatus || dbData.find((curData) => curData.serialNum === item.serialNum)?.connectionStatus)
       .sort((a, b) => {
-        if (orderType === "ascending") {
-          return (a[orderBy] ?? 1) > (b[orderBy] ?? 1) ? 1 : -1;
-        } else {
-          return (a[orderBy] ?? 1) < (b[orderBy] ?? 1) ? 1 : -1;
-        }
+        if (orderType === "ascending") return (a[orderBy] ?? 1) > (b[orderBy] ?? 1) ? 1 : -1;
+        else return (a[orderBy] ?? 1) < (b[orderBy] ?? 1) ? 1 : -1;
       });
   };
 
@@ -127,7 +101,10 @@ export default function Login() {
     orderBy,
     orderType
   );
+  // #endregion
 
+  // TABLE COLUMNS
+  // #region
   const columns: TableColumns[] = [
     {
       id: "serialNum",
@@ -175,63 +152,52 @@ export default function Login() {
       label: "",
     },
   ];
+  // #endregion
 
-  const pagedData: TableData[] = pagination
-    ? filteredData.slice((currentPage - 1) * pageSize, (currentPage - 1) * pageSize + pageSize)
-    : filteredData;
+  // PAGINATION
+  // #region
+  const pagedData: TableData[] = filteredData.slice((currentPage - 1) * pageSize, (currentPage - 1) * pageSize + pageSize);
 
-  const numberOfSelectedItems = tableData.filter((t) => (t?.rowConfig as TableRowConfig).selected === true).length;
+  const handlePageChange = (newPage: number) => setCurrentPage(newPage);
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
+  const paginationProps = {
+    currentPage,
+    onPageChange: handlePageChange,
+    pageSize,
+    totalItems: filteredData.length,
   };
+  // #endregion
 
-  const paginationProps = pagination
-    ? {
-        currentPage,
-        onPageChange: handlePageChange,
-        pageSize,
-        totalItems: filteredData.length,
-      }
-    : undefined;
-
-  const handleSelectPage = (event: ChangeEvent<HTMLInputElement>) => {
-    const newTableData = Array.from(tableData, (v) => {
-      const newValue = v;
-      const index = pagedData.findIndex((p) => p.sid === newValue.sid);
-      if (index > -1) {
-        (newValue?.rowConfig as TableRowConfig).selected = event?.target?.checked;
-      }
-      return newValue;
-    });
-
-    setTableData(newTableData);
-  };
-
+  // SELECTION
+  // #region
   const handleSelect = (event: ChangeEvent<HTMLInputElement>, index: string | number) => {
-    console.log("Select", event.target.checked, index);
-
     return setTableData(
       tableData.map((item) =>
         (item?.serialNum as string) === index ? { ...item, rowConfig: { ...item.rowConfig, selected: event.target.checked } } : item
       )
     );
   };
+  const numSelectedItems = tableData.filter((t) => (t?.rowConfig as TableRowConfig).selected === true).length;
+  // #endregion
 
+  // SORTING
+  // #region
   const handleSort = (_: MouseEvent<HTMLButtonElement>, { id, type }: TableSortBy) => {
     setOrderBy(id);
     setOrderType(type);
   };
+  // #endregion
 
   return (
     <div className="flex flex-col h-screen overflow-hidden xl:mx-auto">
       {/* HEADER */}
-      <CustomHeader />
+      <CustomHeader user="user" page="devices" />
       {/* BODY */}
       <div className="flex items-center justify-center h-full bg-[#d3d3d3]">
         <div className="flex flex-col items-start justify-center gap-y-4 max-w-screen-xl h-full py-6">
           {/* TITLE */}
           <h1 className="text-3xl text-[#212121] font-bold">KVM Devices</h1>
+          {/* TABLE */}
           <Table
             columns={columns}
             data={pagedData}
@@ -239,11 +205,11 @@ export default function Login() {
             onSelect={handleSelect}
             onSort={handleSort}
             preferences={{
-              defaultOrder: ["serialNum", "email", "setupStatus", "connectionStatus"],
+              defaultOrder: order,
               sortBy: { id: orderBy, type: orderType },
               width: [{ columnId: "connect", width: 136 }],
             }}
-            numberOfSelectedItems={numberOfSelectedItems > 0 ? numberOfSelectedItems : undefined}
+            numberOfSelectedItems={numSelectedItems > 0 ? numSelectedItems : undefined}
             pagination={paginationProps}
             rowAvatar={true}
             rowSelector="avatar"

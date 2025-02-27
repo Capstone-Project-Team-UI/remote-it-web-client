@@ -5,10 +5,14 @@ import { LogoHp, TextBox, Password, Button } from "@veneer/core";
 import Link from "next/link";
 
 export default function Login() {
+  const signIn = () => {
+    console.log("Sign In");
+  };
+
   return (
     <div className="flex flex-col h-screen overflow-hidden xl:mx-auto">
       {/* HEADER */}
-      <CustomHeader />
+      <CustomHeader user={undefined} page="login" />
       {/* BODY */}
       <div className="flex items-center justify-center h-full bg-[#d3d3d3]">
         {/* MAIN */}
@@ -28,8 +32,8 @@ export default function Login() {
             <Password label="Password" placeholder="Enter your password" required />
           </div>
           {/* SIGN IN */}
-          <Link href="/devices">
-            <Button className="w-full">Sign in</Button>
+          <Link href="/devices" className="w-full">
+            <Button className="w-full" onClick={signIn} >Sign in</Button>
           </Link>
         </div>
       </div>
