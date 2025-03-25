@@ -1,17 +1,36 @@
 "use client";
 import CustomFooter from "@/components/footer";
 import CustomHeader from "@/components/header";
-import { Table, Search, TableColumns, TableData, SortTypes, TableSortBy, TableRowConfig, Button, Tag, Toggle } from "@veneer/core";
-import { useState, ChangeEvent, MouseEvent } from "react";
+import { Table, Search, TableColumns, TableData, SortTypes, TableSortBy, TableRowConfig, Button, Tag, Toggle, IconPerson } from "@veneer/core";
+import { useState, ChangeEvent, MouseEvent, useEffect } from "react";
 import Link from "next/link";
 
 export default function Login() {
-  const [order, setOrder] = useState(["serialNum", "email", "setupStatus", "connectionStatus"]);
-  const [orderBy, setOrderBy] = useState("serialNum");
+  interface UserData {
+    serialNumber: string;
+    emailAddress: string;
+    // name: { firstName: string; lastName: string };
+    setupStatus: boolean;
+    connectionStatus: boolean;
+  }
+
+  interface UserDBData extends Omit<UserData, "setupStatus" | "connectionStatus"> {
+    userID: string;
+    organization: string;
+    uniqueID: string;
+  }
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [dbData, setDBData] = useState<UserDBData[] | null>(null);
+  const [userData, setUserData] = useState<UserData[] | null>(null);
+  const [tableData, setTableData] = useState<TableData[] | null>(null);
+
+  const [order, setOrder] = useState(["serialNumber", "emailAddress", "setupStatus", "connectionStatus"]);
+  const [orderBy, setOrderBy] = useState("serialNumber");
   const [orderType, setOrderType] = useState<SortTypes>("ascending");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(5);
 
   const [serialNumSearch, setSerialNumSearch] = useState("");
   const [emailSearch, setEmailSearch] = useState("");
@@ -20,70 +39,100 @@ export default function Login() {
 
   // DATA
   // #region
-  const dbData = [
-    {
-      serialNum: "1234",
-      email: "arthur123@hp.com",
-      name: {
-        firstName: "Arthur",
-        lastName: "Moore",
-      },
-      setupStatus: true,
-      connectionStatus: false,
-    },
-    {
-      serialNum: "12345",
-      email: "beatriz456@hp.com",
-      name: {
-        firstName: "Beatriz",
-        lastName: "Crowley",
-      },
-      setupStatus: false,
-      connectionStatus: false,
-    },
-    {
-      serialNum: "123456",
-      email: "carlos111@hp.com",
-      name: {
-        firstName: "Carlos",
-        lastName: "Benz",
-      },
-      setupStatus: true,
-      connectionStatus: true,
-    },
-  ];
+  useEffect(() => {
+    const fetchedUsers = async () => {
+      try {
+        const data: UserDBData[] = await (await fetch("http://localhost:8090/users")).json();
 
-  const data: TableData[] = dbData.map(({ serialNum, email, name, setupStatus, connectionStatus }) => {
-    return {
-      serialNum,
-      email,
-      setupStatus: <Tag label={setupStatus ? "Connected" : "Offline"} colorScheme={setupStatus ? "green" : "gray"} />,
-      connectionStatus: <Tag label={connectionStatus ? "Connected" : "Offline"} colorScheme={connectionStatus ? "green" : "gray"} />,
-      rowConfig: { rowSelector: { label: `${name.firstName[0]}${name.lastName[0]}`.toUpperCase() }, selected: false },
-      connect: (
-        <Link href={`/kvm?serialNum=${serialNum}`}>
-          <Button>Connect</Button>
-        </Link>
-      ),
+        const users: UserData[] = await Promise.all(
+          data.map(async (user) => {
+            const connectionStatus: boolean = false;
+            // await (
+            //   await fetch(`http://localhost:8080/api/check_status?host=host&user=${user.userID}&password=password`)
+            // )?.json();
+
+            return { ...user, setupStatus: true, connectionStatus: connectionStatus ?? false };
+          })
+        );
+
+        const userTableData: TableData[] = users.map(({ serialNumber, emailAddress, setupStatus, connectionStatus }) => {
+          return {
+            serialNumber,
+            emailAddress,
+            setupStatus: <Tag label={setupStatus ? "Registered" : "Not Registered"} colorScheme={setupStatus ? "green" : "gray"} />,
+            // setupStatus: <Tag label={"Connected"} colorScheme={"green"} />,
+            connectionStatus: <Tag label={connectionStatus ? "Connected" : "Offline"} colorScheme={connectionStatus ? "green" : "gray"} />,
+            // connectionStatus: <Tag label={"Offline"} colorScheme={"gray"} />,
+            // rowConfig: { rowSelector: { label: `${name?.firstName[0]}${name?.lastName[0]}`.toUpperCase() }, selected: false },
+            rowConfig: { rowSelector: { icon: <IconPerson /> }, selected: false },
+            connect: (
+              <Link href={`/kvm?serialNumber=${serialNumber}`}>
+                <Button>Connect</Button>
+              </Link>
+            ),
+          };
+        });
+
+        setDBData(dbData);
+        setUserData(users);
+        setTableData(userTableData);
+        setIsLoading(false);
+      } catch (err) {
+        console.log(err);
+      }
     };
-  });
 
-  const [tableData, setTableData] = useState(data);
+    fetchedUsers();
+  }, []);
+
+  // const dbData = [
+  //   {
+  //     serialNumber: "1234",
+  //     email: "arthur123@hp.com",
+  //     name: {
+  //       firstName: "Arthur",
+  //       lastName: "Moore",
+  //     },
+  //     setupStatus: true,
+  //     connectionStatus: false,
+  //   },
+  //   {
+  //     serialNumber: "12345",
+  //     email: "beatriz456@hp.com",
+  //     name: {
+  //       firstName: "Beatriz",
+  //       lastName: "Crowley",
+  //     },
+  //     setupStatus: false,
+  //     connectionStatus: false,
+  //   },
+  //   {
+  //     serialNumber: "123456",
+  //     email: "carlos111@hp.com",
+  //     name: {
+  //       firstName: "Carlos",
+  //       lastName: "Benz",
+  //     },
+  //     setupStatus: true,
+  //     connectionStatus: true,
+  //   },
+  // ];
+
   // #endregion
 
   // FILTERED DATA
   // #region
   const filterSort = (
-    data: TableData[],
-    filters: { serialNum: string; email: string; setupStatus: boolean; connectionStatus: boolean },
+    data: TableData[] | null,
+    filters: { serialNumber: string; emailAddress: string; setupStatus: boolean; connectionStatus: boolean },
     orderBy: string,
     orderType: string
   ) => {
     return data
-      .filter((item) => !filters.serialNum || (item?.serialNum as string)?.toLowerCase().includes(filters.serialNum.toLowerCase()))
-      .filter((item) => !filters.email || (item?.email as string)?.toLowerCase().includes(filters.email.toLowerCase()))
-      .filter((item) => !filters.setupStatus || dbData.find((curData) => curData.serialNum === item.serialNum)?.setupStatus)
-      .filter((item) => !filters.connectionStatus || dbData.find((curData) => curData.serialNum === item.serialNum)?.connectionStatus)
+      ?.filter((item) => !filters.serialNumber || (item?.serialNumber as string)?.toLowerCase().includes(filters.serialNumber.toLowerCase()))
+      .filter((item) => !filters.emailAddress || (item?.emailAddress as string)?.toLowerCase().includes(filters.emailAddress.toLowerCase()))
+      .filter((item) => !filters.setupStatus || userData?.find((curData) => curData.serialNumber === item.serialNumber)?.setupStatus)
+      .filter((item) => !filters.connectionStatus || userData?.find((curData) => curData.serialNumber === item.serialNumber)?.connectionStatus)
       .sort((a, b) => {
         if (orderType === "ascending") return (a[orderBy] ?? 1) > (b[orderBy] ?? 1) ? 1 : -1;
         else return (a[orderBy] ?? 1) < (b[orderBy] ?? 1) ? 1 : -1;
@@ -93,8 +142,8 @@ export default function Login() {
   const filteredData = filterSort(
     tableData,
     {
-      serialNum: serialNumSearch,
-      email: emailSearch,
+      serialNumber: serialNumSearch,
+      emailAddress: emailSearch,
       setupStatus: setupStatusToggle,
       connectionStatus: connectionStatusToggle,
     },
@@ -107,7 +156,7 @@ export default function Login() {
   // #region
   const columns: TableColumns[] = [
     {
-      id: "serialNum",
+      id: "serialNumber",
       label: "Serial Number",
       index: "visible",
       filter: (
@@ -122,7 +171,7 @@ export default function Login() {
       ),
     },
     {
-      id: "email",
+      id: "emailAddress",
       label: "Email",
       filter: (
         <Search
@@ -156,7 +205,7 @@ export default function Login() {
 
   // PAGINATION
   // #region
-  const pagedData: TableData[] = filteredData.slice((currentPage - 1) * pageSize, (currentPage - 1) * pageSize + pageSize);
+  const pagedData: TableData[] | undefined = filteredData?.slice((currentPage - 1) * pageSize, (currentPage - 1) * pageSize + pageSize);
 
   const handlePageChange = (newPage: number) => setCurrentPage(newPage);
 
@@ -164,20 +213,22 @@ export default function Login() {
     currentPage,
     onPageChange: handlePageChange,
     pageSize,
-    totalItems: filteredData.length,
+    totalItems: filteredData?.length ?? 0,
   };
   // #endregion
 
   // SELECTION
   // #region
   const handleSelect = (event: ChangeEvent<HTMLInputElement>, index: string | number) => {
-    return setTableData(
-      tableData.map((item) =>
-        (item?.serialNum as string) === index ? { ...item, rowConfig: { ...item.rowConfig, selected: event.target.checked } } : item
-      )
-    );
+    return tableData != null
+      ? setTableData(
+          tableData.map((item) =>
+            (item?.serialNumber as string) === index ? { ...item, rowConfig: { ...item.rowConfig, selected: event.target.checked } } : item
+          )
+        )
+      : null;
   };
-  const numSelectedItems = tableData.filter((t) => (t?.rowConfig as TableRowConfig).selected === true).length;
+  const numSelectedItems = tableData != null ? tableData.filter((t) => (t?.rowConfig as TableRowConfig).selected === true).length : 0;
   // #endregion
 
   // SORTING
@@ -200,7 +251,7 @@ export default function Login() {
           {/* TABLE */}
           <Table
             columns={columns}
-            data={pagedData}
+            data={pagedData ?? []}
             loadingDataLength={5}
             onSelect={handleSelect}
             onSort={handleSort}
@@ -211,9 +262,10 @@ export default function Login() {
             }}
             numberOfSelectedItems={numSelectedItems > 0 ? numSelectedItems : undefined}
             pagination={paginationProps}
-            rowAvatar={true}
+            rowAvatar={false}
             rowSelector="avatar"
             showFilters={true}
+            loading={isLoading}
             className="h-full"
           />
         </div>

@@ -10,14 +10,14 @@ export async function middleware(req: NextRequest) {
   // If visiting a page that requires authentication while unauthenticated, reroute to login page.
   if (["/devices", "/kvm"].includes(pathname) && !isAuthenticated) return NextResponse.redirect(new URL("/login", req.url));
 
-  // Handle kvm page with 'serialNum' validation.
+  // Handle kvm page with 'serialNumber' validation.
   if (pathname === "/kvm") {
-    const serialNum = searchParams.get("serialNum");
+    const serialNumber = searchParams.get("serialNumber");
 
-    if (!serialNum) return NextResponse.redirect(new URL("/devices", req.url));
+    if (!serialNumber) return NextResponse.redirect(new URL("/devices", req.url));
 
     // Fetch device details (placeholder API call)
-    const device = await fetchDevice(serialNum);
+    const device = await fetchDevice(serialNumber);
 
     if (!device) return NextResponse.redirect(new URL("/devices", req.url));
   }
@@ -29,9 +29,9 @@ export async function middleware(req: NextRequest) {
 }
 
 // Placeholder function to simulate fetching device from an API.
-async function fetchDevice(serialNum: string): Promise<boolean> {
-  const devices = ["1234", "12345", "789"];
-  return devices.includes(serialNum);
+async function fetchDevice(serialNumber: string): Promise<boolean> {
+  const devices = ["1234", "12345", "789", "Device123"];
+  return devices.includes(serialNumber);
 }
 
 // Apply middleware only to these routes.

@@ -3,9 +3,12 @@ import CustomFooter from "@/components/footer";
 import CustomHeader from "@/components/header";
 import { Button } from "@veneer/core";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
   const [isPowerOn, setIsPowerOn] = useState(false);
+
+  const router = useRouter();
 
   const powerOn = () => {
     console.log("Power On");
@@ -19,6 +22,7 @@ export default function Login() {
 
   const endKVM = () => {
     console.log("End KVM");
+    router.push("/devices");
   };
 
   return (
