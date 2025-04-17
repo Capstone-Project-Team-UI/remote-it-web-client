@@ -3,21 +3,19 @@ import CustomFooter from "@/components/footer";
 import CustomHeader from "@/components/header";
 import { Table, Search, TableColumns, TableData, SortTypes, TableSortBy, TableRowConfig, Button, Tag, Toggle, IconPerson } from "@veneer/core";
 import { useState, ChangeEvent, MouseEvent, useEffect } from "react";
-import Link from "next/link";
 
 export default function Login() {
-  interface UserData {
+  interface UserDBData {
     serialNumber: string;
     emailAddress: string;
-    // name: { firstName: string; lastName: string };
-    setupStatus: boolean;
-    connectionStatus: boolean;
-  }
-
-  interface UserDBData extends Omit<UserData, "setupStatus" | "connectionStatus"> {
     userID: string;
     organization: string;
     uniqueID: string;
+  }
+
+  interface UserData extends UserDBData {
+    setupStatus: boolean;
+    connectionStatus: boolean;
   }
 
   const [isLoading, setIsLoading] = useState(true);
@@ -45,32 +43,70 @@ export default function Login() {
         const data = await fetch("http://localhost:8090/users");
         const dataJson: UserDBData[] = await data.json();
 
+        // UPAL
+        // NOTE: The check status request is made automatically for each fetched user.
         const users: UserData[] = await Promise.all(
           dataJson.map(async (user) => {
-            const connectionStatus: boolean = false;
-            // await (
-            //   await fetch(`http://localhost:8080/api/check_status?host=host&user=${user.userID}&password=password`)
-            // )?.json();
+            let connectionStatus: boolean = false;
+
+            // NOTE: These are the values that are passed into the check status request as query params.
+            const hostParam = "";
+            const userParam = "";
+            const passwordParam = "";
+
+            try {
+              // NOTE: The API docs says that 'api' is included here and that the name of the endpoint is 'check_status', alter as necessary.
+              const checkStatusRes = await fetch(
+                `http://localhost:8080/api/local/check_status?host=${hostParam}&user=${userParam}&password=${passwordParam}`,
+                {
+                  method: "GET",
+                }
+              );
+
+              // If status check is successful, set the connection status for this entry to be true.
+              connectionStatus = checkStatusRes.ok;
+            } catch (err) {
+              console.error(err);
+            }
 
             return { ...user, setupStatus: true, connectionStatus: connectionStatus ?? false };
           })
         );
+
+        // NOTE: Not sure what params you need passed into this function, I put serialNumber here for now. Lmk if you need anything else.
+        // line 109 is where this function is called for params to be passed, and you can access/add any variables under 'UserData' (line 16)
+        // on line 100.
+        const onStartKVM = async (serialNumber: string) => {
+          try {
+            // NOTE: The API docs says that 'api' is included here, remove it if that changed.
+            const res = await fetch("http://localhost:8080/api/local/start_kvm", {
+              method: "POST",
+              // NOTE: Body is blank
+              body: JSON.stringify({
+                host: "",
+                user: "",
+                password: "",
+              }),
+            });
+
+            if (!res.ok) return;
+
+            // TODO: Do somewith with response, depending on the form of data that is returned if any (JSON, text, etc.)
+          } catch (err) {
+            console.error(err);
+          }
+        };
 
         const userTableData: TableData[] = users.map(({ serialNumber, emailAddress, setupStatus, connectionStatus }) => {
           return {
             serialNumber,
             emailAddress,
             setupStatus: <Tag label={setupStatus ? "Registered" : "Not Registered"} colorScheme={setupStatus ? "green" : "gray"} />,
-            // setupStatus: <Tag label={"Connected"} colorScheme={"green"} />,
             connectionStatus: <Tag label={connectionStatus ? "Connected" : "Offline"} colorScheme={connectionStatus ? "green" : "gray"} />,
-            // connectionStatus: <Tag label={"Offline"} colorScheme={"gray"} />,
-            // rowConfig: { rowSelector: { label: `${name?.firstName[0]}${name?.lastName[0]}`.toUpperCase() }, selected: false },
             rowConfig: { rowSelector: { icon: <IconPerson /> }, selected: false },
-            connect: (
-              <Link href={`/kvm?serialNumber=${serialNumber}`}>
-                <Button>Connect</Button>
-              </Link>
-            ),
+            // NOTE: The start kvm request is made whenever the "Connect" button is clicked.
+            // NOTE: This is where the function that makes the 'start_kvm' endpoint request is called.
+            connect: <Button onClick={() => onStartKVM(serialNumber)}>Connect</Button>,
           };
         });
 
