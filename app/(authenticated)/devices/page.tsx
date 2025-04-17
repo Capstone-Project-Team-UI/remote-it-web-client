@@ -42,10 +42,11 @@ export default function Login() {
   useEffect(() => {
     const fetchedUsers = async () => {
       try {
-        const data: UserDBData[] = await (await fetch("http://localhost:8090/users")).json();
+        const data = await fetch("http://localhost:8090/users");
+        const dataJson: UserDBData[] = await data.json();
 
         const users: UserData[] = await Promise.all(
-          data.map(async (user) => {
+          dataJson.map(async (user) => {
             const connectionStatus: boolean = false;
             // await (
             //   await fetch(`http://localhost:8080/api/check_status?host=host&user=${user.userID}&password=password`)
@@ -78,46 +79,12 @@ export default function Login() {
         setTableData(userTableData);
         setIsLoading(false);
       } catch (err) {
-        console.log(err);
+        console.error(err);
       }
     };
 
     fetchedUsers();
   }, []);
-
-  // const dbData = [
-  //   {
-  //     serialNumber: "1234",
-  //     email: "arthur123@hp.com",
-  //     name: {
-  //       firstName: "Arthur",
-  //       lastName: "Moore",
-  //     },
-  //     setupStatus: true,
-  //     connectionStatus: false,
-  //   },
-  //   {
-  //     serialNumber: "12345",
-  //     email: "beatriz456@hp.com",
-  //     name: {
-  //       firstName: "Beatriz",
-  //       lastName: "Crowley",
-  //     },
-  //     setupStatus: false,
-  //     connectionStatus: false,
-  //   },
-  //   {
-  //     serialNumber: "123456",
-  //     email: "carlos111@hp.com",
-  //     name: {
-  //       firstName: "Carlos",
-  //       lastName: "Benz",
-  //     },
-  //     setupStatus: true,
-  //     connectionStatus: true,
-  //   },
-  // ];
-
   // #endregion
 
   // FILTERED DATA
@@ -242,7 +209,7 @@ export default function Login() {
   return (
     <div className="flex flex-col h-screen overflow-hidden xl:mx-auto">
       {/* HEADER */}
-      <CustomHeader user="user" page="devices" />
+      <CustomHeader page="devices" />
       {/* BODY */}
       <div className="flex items-center justify-center h-full bg-[#d3d3d3]">
         <div className="flex flex-col items-start justify-center gap-y-4 max-w-screen-xl h-full py-6">

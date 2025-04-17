@@ -1,13 +1,14 @@
 "use client";
 import { Header, AppHeader, LogoHp, Avatar, ContextualMenu, MenuList, MenuItem, IconLogOut, Button, IconPerson } from "@veneer/core";
 import Link from "next/link";
+import { logout } from "@/clientLib";
 import { useRouter } from "next/navigation";
 
-export default function CustomHeader({ user, page }: { user: string | undefined; page: "login" | "devices" | "kvm" }) {
+export default function CustomHeader({ page }: { page: "login" | "devices" }) {
   const router = useRouter();
 
-  const logout = () => {
-    console.log("Logout");
+  const onLogout = async () => {
+    await logout();
     router.push("/login");
   };
 
@@ -19,10 +20,10 @@ export default function CustomHeader({ user, page }: { user: string | undefined;
         </Link>
       }
       trailingArea={
-        user ? (
+        page === "devices" ? (
           <ContextualMenu anchorNode={<Avatar button={true} icon={<IconPerson />} />} placement="bottom">
             <MenuList>
-              <MenuItem label="Logout" leadingArea={<IconLogOut />} value={1} onClick={logout} />
+              <MenuItem label="Logout" leadingArea={<IconLogOut />} value={1} onClick={onLogout} />
             </MenuList>
           </ContextualMenu>
         ) : page !== "login" ? (
